@@ -1,0 +1,83 @@
+# Go binaries and build artifacts
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Code coverage profiles and other test artifacts
+*.out
+coverage.*
+*.coverprofile
+profile.cov
+
+# Dependency directories
+vendor/
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Editor/IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Runtime directories
+logs/
+run/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Project specific
+# Compiled binary
+/route-service
+
+# Log files
+*.log
+
+# Temporary files
+tmp/
+temp/
+
+# Crash logs
+crash.log
+
+# Configuration files with secrets
+config.yaml
+config.json
+config.local.*
+
+# Documentation build
+docs/_build/
+docs/_site/
+
+# Backup files
+*.bak
+*.backup
+
+# IDE specific
+.project
+.classpath
+.settings/
+
+# Crush AI tool directory
+.crush/
