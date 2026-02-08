@@ -12,7 +12,7 @@ import (
 
 func main() {
 	// Command line flags
-	providerType := flag.String("provider", "openstreetmap", "Routing provider: openstreetmap, google, mapbox, here")
+	providerType := flag.String("provider", "openstreetmap", "Routing provider: openstreetmap, local-osrm, google, mapbox, here")
 	apiKey := flag.String("api-key", "", "API key for the routing provider (if required)")
 	baseURL := flag.String("base-url", "", "Custom base URL for the routing provider")
 	port := flag.String("port", "8080", "Port to listen on")

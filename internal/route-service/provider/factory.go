@@ -11,6 +11,9 @@ func NewProvider(config RouteFinderConfig) (Provider, error) {
 	case "", "openstreetmap", "osrm":
 		return NewOpenStreetMapProvider(config), nil
 
+	case "local-osrm", "localosrm":
+		return NewLocalOSRMProvider(config), nil
+
 	case "google", "googlemaps":
 		// TODO: Implement Google Maps provider
 		return nil, fmt.Errorf("Google Maps provider not yet implemented")

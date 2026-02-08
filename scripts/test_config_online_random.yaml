@@ -1,0 +1,24 @@
+# Test configuration for online OSRM with random method (50 routes)
+route_generator:
+  route_count: 50
+  method: "random"
+  country: "Iran"
+  
+  country_bounds:
+    Iran:
+      min_lat: 25.0
+      max_lat: 40.0
+      min_lng: 44.0
+      max_lng: 63.0
+  
+  route_service:
+    base_url: "http://localhost:8090"
+    timeout_seconds: 30
+    max_concurrent_requests: 3  # Lower for online OSRM
+  
+  output:
+    directory: "./test_results/online_random"
+    format: "json"
+    compress: false
+    
+  random_seed: 42

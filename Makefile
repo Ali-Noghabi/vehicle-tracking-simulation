@@ -1,27 +1,81 @@
 # Makefile for Vehicle Tracking Route Service
 
-.PHONY: build clean test run help
+.PHONY: all build build-service build-generator clean test test-service test-generator \
+        run run-service run-generator run-local-osrm run-online-osrm \
+        run-test-random run-test-permutation run-test-local-random run-test-local-permutation \
+        deps fmt vet help
 
 # Variables
 BINARY_NAME=route-service
+GENERATOR_NAME=route-generator
 BUILD_DIR=bin
 SOURCE_DIR=cmd/route-service
+GENERATOR_SOURCE_DIR=cmd/route-generator
+DEFAULT_PORT=8090
+LOCAL_OSRM_PORT=5000
 
 # Default target
-help:
-	@echo "Available targets:"
-	@echo "  build    - Build the service binary"
-	@echo "  clean    - Remove build artifacts"
-	@echo "  test     - Run tests"
-	@echo "  run      - Run the service on default port (8090)"
-	@echo "  help     - Show this help message"
+all: build
 
-# Build the service
-build:
+help:
+	@echo "🚗 Vehicle Tracking Route Service - Makefile Commands"
+	@echo "======================================================"
+	@echo ""
+	@echo "📦 BUILD COMMANDS:"
+	@echo "  all              - Build everything (service + generator)"
+	@echo "  build            - Build everything (service + generator)"
+	@echo "  build-service    - Build the route service binary"
+	@echo "  build-generator  - Build the route generator binary"
+	@echo ""
+	@echo "🧹 CLEANUP:"
+	@echo "  clean            - Remove all build artifacts and generated files"
+	@echo ""
+	@echo "🧪 TESTING:"
+	@echo "  test             - Run all tests"
+	@echo "  test-service     - Test route service API endpoints"
+	@echo "  test-generator   - Test route generator with sample config"
+	@echo ""
+	@echo "▶️  RUN SERVICE (different providers):"
+	@echo "  run              - Run service with default provider (openstreetmap) on port 8090"
+	@echo "  run-service      - Run service with default provider on port 8090"
+	@echo "  run-local-osrm   - Run service with local OSRM provider (http://localhost:5000)"
+	@echo "  run-online-osrm  - Run service with online OSRM provider"
+	@echo "  run-port         - Run service on custom port (PORT=8080)"
+	@echo ""
+	@echo "🎲 RUN GENERATOR (different test scenarios):"
+	@echo "  run-generator           - Run generator with main config.yaml"
+	@echo "  run-test-random         - Test: Online OSRM + Random method"
+	@echo "  run-test-permutation    - Test: Online OSRM + Permutation method"
+	@echo "  run-test-local-random   - Test: Local OSRM + Random method"
+	@echo "  run-test-local-permutation - Test: Local OSRM + Permutation method"
+	@echo ""
+	@echo "🔧 DEVELOPMENT:"
+	@echo "  deps             - Download Go dependencies"
+	@echo "  fmt              - Format Go code"
+	@echo "  vet              - Vet Go code"
+	@echo ""
+	@echo "📚 EXAMPLES:"
+	@echo "  make run-local-osrm"
+	@echo "  make run-test-local-random"
+	@echo "  make test-service"
+	@echo ""
+
+# Build everything
+build: build-service build-generator
+
+# Build the route service
+build-service:
 	@echo "Building $(BINARY_NAME)..."
 	@mkdir -p $(BUILD_DIR)
 	@go build -o $(BUILD_DIR)/$(BINARY_NAME) ./$(SOURCE_DIR)
 	@echo "Build complete: $(BUILD_DIR)/$(BINARY_NAME)"
+
+# Build the route generator
+build-generator:
+	@echo "Building $(GENERATOR_NAME)..."
+	@mkdir -p $(BUILD_DIR)
+	@go build -o $(BUILD_DIR)/$(GENERATOR_NAME) ./$(GENERATOR_SOURCE_DIR)
+	@echo "Build complete: $(BUILD_DIR)/$(GENERATOR_NAME)"
 
 # Clean build artifacts
 clean:
@@ -29,22 +83,77 @@ clean:
 	@rm -rf $(BUILD_DIR)
 	@rm -rf logs
 	@rm -rf run
+	@rm -rf generated_routes
 	@echo "Clean complete"
 
-# Run tests
-test:
-	@echo "Running tests..."
-	@cd tests && go run test_route_service.go -port 8090
+# Run all tests
+test: test-service test-generator
 
-# Run the service
-run: build
-	@echo "Starting service on port 8090..."
-	@./$(BUILD_DIR)/$(BINARY_NAME) -port 8090
+# Test route service API endpoints
+test-service: build-service
+	@echo "Testing route service API endpoints..."
+	@chmod +x scripts/test_route_service.sh 2>/dev/null || true
+	@./scripts/test_route_service.sh
+
+# Test route generator
+test-generator: build-generator
+	@echo "Testing route generator..."
+	@chmod +x scripts/test_route_generator.sh 2>/dev/null || true
+	@./scripts/test_route_generator.sh
+
+# Run comprehensive tests
+test-comprehensive: build
+	@echo "Running comprehensive tests..."
+	@chmod +x scripts/run_comprehensive_tests.sh 2>/dev/null || true
+	@./scripts/run_comprehensive_tests.sh
+
+# Run the route service (default provider)
+run: run-service
+
+# Run the route service (default provider)
+run-service: build-service
+	@echo "Starting service with default provider (openstreetmap) on port $(DEFAULT_PORT)..."
+	@./$(BUILD_DIR)/$(BINARY_NAME) -port $(DEFAULT_PORT)
 
 # Run with custom port
-run-port: build
+run-port: build-service
 	@echo "Starting service on port $(PORT)..."
 	@./$(BUILD_DIR)/$(BINARY_NAME) -port $(PORT)
+
+# Run the route service with local OSRM provider
+run-local-osrm: build-service
+	@echo "Starting service with local OSRM provider on port $(DEFAULT_PORT)..."
+	@./$(BUILD_DIR)/$(BINARY_NAME) -port $(DEFAULT_PORT) -provider local-osrm -base-url http://localhost:$(LOCAL_OSRM_PORT)
+
+# Run the route service with online OSRM provider
+run-online-osrm: build-service
+	@echo "Starting service with online OSRM provider on port $(DEFAULT_PORT)..."
+	@./$(BUILD_DIR)/$(BINARY_NAME) -port $(DEFAULT_PORT) -provider openstreetmap
+
+# Run the route generator
+run-generator: build-generator
+	@echo "Starting route generator with main config..."
+	@./$(BUILD_DIR)/$(GENERATOR_NAME) -config config.yaml
+
+# Test: Online OSRM + Random method
+run-test-random: build-generator
+	@echo "Testing: Online OSRM + Random method..."
+	@./$(BUILD_DIR)/$(GENERATOR_NAME) -config scripts/test_config_online_random.yaml
+
+# Test: Online OSRM + Permutation method
+run-test-permutation: build-generator
+	@echo "Testing: Online OSRM + Permutation method..."
+	@./$(BUILD_DIR)/$(GENERATOR_NAME) -config scripts/test_config_online_permutation.yaml
+
+# Test: Local OSRM + Random method
+run-test-local-random: build-generator
+	@echo "Testing: Local OSRM + Random method..."
+	@./$(BUILD_DIR)/$(GENERATOR_NAME) -config scripts/test_config_local_random.yaml
+
+# Test: Local OSRM + Permutation method
+run-test-local-permutation: build-generator
+	@echo "Testing: Local OSRM + Permutation method..."
+	@./$(BUILD_DIR)/$(GENERATOR_NAME) -config scripts/test_config_local_permutation.yaml
 
 # Install dependencies
 deps:
