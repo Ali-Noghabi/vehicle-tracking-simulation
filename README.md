@@ -575,6 +575,166 @@ Each test measures:
 - Log success/failure rates from route generator
 - Monitor processing times for large batches
 
+## Vehicle Tracking Simulation Service
+
+Now that you have generated routes, you can simulate vehicle movement and send telemetry data via MQTT.
+
+### Features
+
+- **Realistic Vehicle Simulation**: Vehicles move along generated routes with realistic speeds
+- **MQTT Telemetry**: Sends real-time telemetry data in batch format
+- **Polyline Decoding**: Accurately follows route geometry from generated routes
+- **Configurable Parameters**: Speed variation, update intervals, telemetry ranges
+- **Batch Processing**: Efficient batch telemetry sending for multiple vehicles
+
+### Project Structure Update
+
+```
+vehicle-tracking-simulation/
+├── cmd/
+│   ├── route-service/
+│   │   └── main.go           # Route service entry point
+│   ├── route-generator/
+│   │   └── main.go           # Route generator entry point
+│   └── simulation-service/   # NEW: Vehicle tracking simulation
+│       ├── main.go           # Simulation service entry point
+│       ├── polyline.go       # Polyline decoding utilities
+│       ├── route_iterator.go # Route position calculation
+│       ├── batch_telemetry.go # MQTT batch telemetry
+│       ├── config.yaml       # Simulation configuration
+│       └── go.mod           # Go module
+├── test_results/
+│   └── local_random/         # Generated routes for simulation
+│       ├── route_000001.json
+│       ├── route_000002.json
+│       └── ...
+└── ...
+```
+
+### Quick Start
+
+```bash
+# 1. Install MQTT broker (if not already installed)
+sudo apt install mosquitto mosquitto-clients
+sudo systemctl start mosquitto
+
+# 2. Build simulation service
+make build-simulation
+
+# 3. Run simulation (uses routes from test_results/local_random/)
+make run-simulation
+
+# 4. Monitor telemetry (in another terminal)
+mosquitto_sub -t 'vehicle/telemetry' -v
+mosquitto_sub -t 'vehicle/telemetry_batch' -v
+```
+
+### Configuration
+
+Edit `cmd/simulation-service/config.yaml`:
+
+```yaml
+mqtt:
+  broker: "tcp://localhost:1883"
+  topic: "vehicle/telemetry"
+  client_id: "vehicle_simulator"
+  qos: 0
+  retain: false
+
+simulation:
+  update_interval: "5s"      # Time between telemetry updates
+  simulation_speed: 1.0       # 1.0 = real-time, 2.0 = 2x speed
+  routes_path: "../../test_results/local_random"
+  speed_variation: 0.2        # ±20% variation from average speed
+  
+  # Telemetry parameters
+  altitude_range: [100, 150]  # meters
+  accuracy_range: [5, 15]     # meters
+  battery_range: [80, 100]    # percentage
+  signal_range: [70, 100]     # percentage
+```
+
+### Telemetry Format
+
+Individual telemetry (sent to `vehicle/telemetry`):
+```json
+{
+  "vehicle_id": "vehicle_001",
+  "timestamp": 1739116800,
+  "lat": 35.6892,
+  "lon": 51.3890,
+  "spd": 45.2,
+  "hdg": 123.5,
+  "alt": 120.5,
+  "acc": 8.2,
+  "battery": 92.5,
+  "signal": 85.0
+}
+```
+
+Batch telemetry (sent to `vehicle/telemetry_batch`):
+```json
+{
+  "batch_id": "batch_1739116800123456789",
+  "timestamp": 1739116800,
+  "vehicles": [
+    { ...telemetry 1... },
+    { ...telemetry 2... },
+    { ...telemetry 3... }
+  ],
+  "batch_size": 3
+}
+```
+
+### How It Works
+
+1. **Loads generated routes** from `test_results/local_random/`
+2. **Creates vehicle simulators** for each successful route
+3. **Calculates speed range** based on route distance/duration
+4. **Updates positions** along route geometry using polyline decoding
+5. **Sends telemetry** via MQTT at configured intervals
+6. **Supports batch telemetry** for efficient bulk sending
+
+### Speed Calculation
+
+The simulation uses realistic speed calculations:
+- **Average speed** = route distance / route duration
+- **Speed variation** = ±20% (configurable) from average
+- **Random speed** within range for each update
+- **Position calculation** based on elapsed time × current speed
+
+### Testing the Simulation
+
+```bash
+# Build and run simulation
+make run-simulation
+
+# Monitor output
+# You should see logs like:
+# Loaded 44 routes from test_results/local_random
+# Created simulator for vehicle_001 (distance: 518500m, duration: 26424s, avg speed: 19.6 m/s)
+# Sent 44 telemetry updates at 14:30:05
+
+# Test MQTT connectivity
+mosquitto_pub -t 'test' -m 'hello'
+mosquitto_sub -t 'test' -v
+```
+
+### Integration with Route Generation
+
+The simulation service works seamlessly with the route generator:
+
+```bash
+# 1. Generate routes
+make run-test-local-random
+
+# 2. Start simulation
+make run-simulation
+
+# 3. Monitor telemetry
+mosquitto_sub -t 'vehicle/telemetry' -v | jq .
+```
+
 ## Future Enhancements
 
 - [ ] Add Google Maps provider
@@ -588,6 +748,12 @@ Each test measures:
 - [ ] Implement rate limiting
 - [ ] Add database storage for generated routes
 - [ ] Implement batch processing with resume capability
+- [ ] **Vehicle Tracking Simulation** ✓ COMPLETED
+- [ ] Add web dashboard for monitoring simulation
+- [ ] Implement historical playback of routes
+- [ ] Add geofencing and alerting
+- [ ] Support for multiple vehicle types (trucks, buses, etc.)
+- [ ] Integration with mapping visualization tools
 
 ## License
 

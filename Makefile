@@ -8,9 +8,11 @@
 # Variables
 BINARY_NAME=route-service
 GENERATOR_NAME=route-generator
+SIMULATION_NAME=simulation-service
 BUILD_DIR=bin
 SOURCE_DIR=cmd/route-service
 GENERATOR_SOURCE_DIR=cmd/route-generator
+SIMULATION_SOURCE_DIR=cmd/simulation-service
 DEFAULT_PORT=8090
 LOCAL_OSRM_PORT=5000
 
@@ -26,6 +28,7 @@ help:
 	@echo "  build            - Build everything (service + generator)"
 	@echo "  build-service    - Build the route service binary"
 	@echo "  build-generator  - Build the route generator binary"
+	@echo "  build-simulation - Build vehicle tracking simulation service"
 	@echo ""
 	@echo "🧹 CLEANUP:"
 	@echo "  clean            - Remove all build artifacts and generated files"
@@ -34,6 +37,8 @@ help:
 	@echo "  test             - Run all tests"
 	@echo "  test-service     - Test route service API endpoints"
 	@echo "  test-generator   - Test route generator with sample config"
+	@echo "  test-comprehensive - Run all tests (service + generator)"
+	@echo "  test-local-random - Test local OSRM with random method"
 	@echo ""
 	@echo "▶️  RUN SERVICE (different providers):"
 	@echo "  run              - Run service with default provider (openstreetmap) on port 8090"
@@ -41,6 +46,7 @@ help:
 	@echo "  run-local-osrm   - Run service with local OSRM provider (http://localhost:5000)"
 	@echo "  run-online-osrm  - Run service with online OSRM provider"
 	@echo "  run-port         - Run service on custom port (PORT=8080)"
+	@echo "  run-simulation   - Run vehicle tracking simulation (requires MQTT broker)"
 	@echo ""
 	@echo "🎲 RUN GENERATOR (different test scenarios):"
 	@echo "  run-generator           - Run generator with main config.yaml"
@@ -58,10 +64,12 @@ help:
 	@echo "  make run-local-osrm"
 	@echo "  make run-test-local-random"
 	@echo "  make test-service"
+	@echo "  make run-simulation"
+	@echo "  make simulation-help"
 	@echo ""
 
 # Build everything
-build: build-service build-generator
+build: build-service build-generator build-simulation
 
 # Build the route service
 build-service:
@@ -170,3 +178,27 @@ fmt:
 vet:
 	@echo "Checking code with go vet..."
 	@go vet ./...
+
+## Simulation
+build-simulation: ## Build vehicle tracking simulation service
+	@echo "Building $(SIMULATION_NAME)..."
+	@mkdir -p $(BUILD_DIR)
+	@go build -o $(BUILD_DIR)/$(SIMULATION_NAME) ./$(SIMULATION_SOURCE_DIR)
+	@echo "Build complete: $(BUILD_DIR)/$(SIMULATION_NAME)"
+
+run-simulation: build-simulation ## Run vehicle tracking simulation (requires MQTT broker)
+	@echo "Starting vehicle tracking simulation..."
+	@echo "Note: Requires MQTT broker running (e.g., mosquitto)"
+	@./$(BUILD_DIR)/$(SIMULATION_NAME) -config cmd/simulation-service/config.yaml
+
+simulation-help: ## Show simulation service help
+	@echo "Vehicle Tracking Simulation Service"
+	@echo ""
+	@echo "To run simulation:"
+	@echo "  1. Install MQTT broker: sudo apt install mosquitto mosquitto-clients"
+	@echo "  2. Start MQTT broker: sudo systemctl start mosquitto"
+	@echo "  3. Run simulation: make run-simulation"
+	@echo ""
+	@echo "To monitor telemetry:"
+	@echo "  mosquitto_sub -t 'vehicle/telemetry' -v"
+	@echo "  mosquitto_sub -t 'vehicle/telemetry_batch' -v"
