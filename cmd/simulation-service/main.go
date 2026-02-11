@@ -84,11 +84,14 @@ func (t *Telemetry) validate() {
 
 // VehicleSimulator simulates a vehicle moving along a route
 type VehicleSimulator struct {
-	VehicleID     int
-	Route         *Route
-	RouteIterator *RouteIterator
-	StartTime     time.Time
-	SpeedRange    [2]float64 // min and max speed in m/s
+	VehicleID      int
+	Route          *Route
+	RouteIterator  *RouteIterator
+	StartTime      time.Time
+	SpeedRange     [2]float64 // min and max speed in m/s
+	CurrentSpeed   float64    // current speed in m/s
+	DistanceTraveled float64  // cumulative distance traveled in meters
+	LastUpdateTime time.Time  // time of last update
 }
 
 // Config holds simulation configuration
@@ -157,9 +160,10 @@ func main() {
 		}
 
 		simulator := &VehicleSimulator{
-			VehicleID: route.Metadata.ID,
-			Route:     route,
-			StartTime: time.Now(),
+			VehicleID:      route.Metadata.ID,
+			Route:          route,
+			StartTime:      time.Now(),
+			LastUpdateTime: time.Now(),
 		}
 
 		// Calculate speed range based on route distance and duration

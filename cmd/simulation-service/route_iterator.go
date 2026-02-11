@@ -82,11 +82,20 @@ func (ri *RouteIterator) CalculatePosition(distanceTraveled float64) (lat, lng, 
 
 // UpdateVehicleSimulator updates the vehicle simulator with proper route iteration
 func (v *VehicleSimulator) UpdateWithRouteIterator(currentTime time.Time) *Telemetry {
-	elapsed := currentTime.Sub(v.StartTime).Seconds()
+	// Calculate time since last update
+	timeSinceLastUpdate := currentTime.Sub(v.LastUpdateTime).Seconds()
 	
-	// Use random speed within range for realism
-	speed := v.SpeedRange[0] + rand.Float64()*(v.SpeedRange[1]-v.SpeedRange[0])
-	distanceTraveled := speed * elapsed
+	// Update current speed (can vary within range)
+	v.CurrentSpeed = v.SpeedRange[0] + rand.Float64()*(v.SpeedRange[1]-v.SpeedRange[0])
+	
+	// Calculate distance traveled since last update
+	distanceSinceLastUpdate := v.CurrentSpeed * timeSinceLastUpdate
+	
+	// Update cumulative distance traveled
+	v.DistanceTraveled += distanceSinceLastUpdate
+	
+	// Update last update time
+	v.LastUpdateTime = currentTime
 	
 	// Create iterator if not exists
 	if v.RouteIterator == nil {
@@ -94,7 +103,7 @@ func (v *VehicleSimulator) UpdateWithRouteIterator(currentTime time.Time) *Telem
 	}
 	
 	// Calculate position along route
-	lat, lng, heading := v.RouteIterator.CalculatePosition(distanceTraveled)
+	lat, lng, heading := v.RouteIterator.CalculatePosition(v.DistanceTraveled)
 	
 	// Generate random values with validation
 	altitude := 100 + rand.Float64()*50
@@ -103,8 +112,8 @@ func (v *VehicleSimulator) UpdateWithRouteIterator(currentTime time.Time) *Telem
 	signal := 70 + rand.Float64()*30
 	
 	// Validate all values to ensure they're valid numbers
-	if math.IsNaN(speed) || math.IsInf(speed, 0) {
-		speed = 0.0
+	if math.IsNaN(v.CurrentSpeed) || math.IsInf(v.CurrentSpeed, 0) {
+		v.CurrentSpeed = 0.0
 	}
 	if math.IsNaN(heading) || math.IsInf(heading, 0) {
 		heading = 0.0
@@ -127,7 +136,7 @@ func (v *VehicleSimulator) UpdateWithRouteIterator(currentTime time.Time) *Telem
 		Timestamp: currentTime.Unix(),
 		Lat:       lat,
 		Lon:       lng,
-		Speed:     speed * 3.6, // Convert m/s to km/h
+		Speed:     v.CurrentSpeed * 3.6, // Convert m/s to km/h
 		Heading:   heading,
 		Altitude:  altitude,
 		Accuracy:  accuracy,
